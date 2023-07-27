@@ -6,56 +6,86 @@ Try streamlit
 import streamlit as st
 import pandas as pd
 
+st.set_page_config(
+	page_title = 'ClumpyCrunch',
+	layout = 'wide',
+	)
+
 st.write("""
 # ClumpyCrunch
-
 ### Input data
-
 Paste your raw data here:
 """)
 
-df = pd.DataFrame({
-	'UID':     pd.Series([''], dtype = 'str'),
-	'Session': pd.Series([], dtype = 'str'),
-	'Sample':  pd.Series([], dtype = 'str'),
-	'd45':     pd.Series([], dtype = 'float'),
-	'd46':     pd.Series([], dtype = 'float'),
-	'd47':     pd.Series([], dtype = 'float'),
-	'd48':     pd.Series([], dtype = 'float'),
-	'd49':     pd.Series([], dtype = 'float'),
-	})
 
 rawdata = st.data_editor(
-	df,
+	pd.DataFrame({
+		'UID':     pd.Series([], dtype = 'str'),
+		'Session': pd.Series([], dtype = 'str'),
+		'Sample':  pd.Series([], dtype = 'str'),
+		'd45':     pd.Series([], dtype = 'float'),
+		'd46':     pd.Series([], dtype = 'float'),
+		'd47':     pd.Series([], dtype = 'float'),
+		'd48':     pd.Series([], dtype = 'float'),
+		'd49':     pd.Series([], dtype = 'float'),
+		}),
 	num_rows = 'dynamic',
 	use_container_width = True,
+	hide_index = True,
 	)
 
 rawdata = rawdata.to_dict('records')
 rawdata = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in rawdata]
 
-rawdata
+# D47_anchors_expander = st.expander('Standardization Anchors')
+# with D47_anchors_expander:
 
-D47_anchors_expander = st.expander('Δ47 Anchors')
-with D47_anchors_expander:
-	st.write("### Δ47 Anchors")
+st.write("""
+### Standardization Anchors
+The following samples are used as anchors to standardize δ<sup>13</sup>C<sub>VPDB</sub>, δ<sup>18</sup>O<sub>VPDB</sub>, Δ<sub>47</sub>, and Δ<sub>48</sub> values:
+""", unsafe_allow_html = True)
 
-	D47anchors_df = pd.DataFrame({
-		'Sample':  pd.Series([], dtype = 'str'),
-		'NominalD47':     pd.Series([], dtype = 'float'),
-		})
+anchors_df = pd.DataFrame({
+	'Sample':    pd.Series([], dtype = 'str'),
+	'd13C_VPDB': pd.Series([], dtype = 'float'),
+	'd18O_VPDB': pd.Series([], dtype = 'float'),
+	'D47':       pd.Series([], dtype = 'float'),
+	'D48':       pd.Series([], dtype = 'float'),
+	})
 
-	D47anchors = st.data_editor(
-		D47anchors_df,
-		num_rows = 'dynamic',
-		use_container_width = True,
-		)
+anchors = st.data_editor(
+	anchors_df,
+	num_rows = 'dynamic',
+	use_container_width = True,
+	hide_index = True,
+	)
 
-	D47anchors = D47anchors.to_dict('records')
-	D47anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in D47anchors]
-	
-	D47anchors
-	
+anchors = anchors.to_dict('records')
+anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
+
+st.write("### Oxygen-17 correction parameters and acid fractionation of oxygen-18")
+isoparams = st.data_editor(
+	pd.DataFrame({
+		'R13_VPDB':     pd.Series([0.01118],    dtype = 'float'),
+		'R18_VSMOW':    pd.Series([0.0020052],  dtype = 'float'),
+		'R17_VSMOW':    pd.Series([0.00038475], dtype = 'float'),
+		'lambda_17':    pd.Series([0.528],      dtype = 'float'),
+		'alpha18_acid': pd.Series([1.008129],   dtype = 'float'),
+		}),
+	num_rows = 1,
+	use_container_width = True,
+	hide_index = True,
+	column_config = {
+		'R13_VPDB':     st.column_config.NumberColumn(format = '%.5f'),
+		'R18_VSMOW':    st.column_config.NumberColumn(format = '%.7f'),
+		'R17_VSMOW':    st.column_config.NumberColumn(format = '%.8f'),
+		'lambda_17':    st.column_config.NumberColumn(format = '%.3f'),
+		'alpha18_acid': st.column_config.NumberColumn(format = '%.6f'),
+		},
+	)
+
+isoparams = isoparams.to_dict('records')[0]
+
 
 # A01	Session01	ETH-1	5.795017	11.627668	16.893512	11.491072	17.277490
 # A02	Session01	IAEA-C1	6.219070	11.491072	17.277490	-4.817179	-11.635064
