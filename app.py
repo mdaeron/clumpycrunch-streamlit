@@ -64,27 +64,54 @@ anchors = anchors.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
 st.write("### Oxygen-17 correction parameters and acid fractionation of oxygen-18")
+
 isoparams = st.data_editor(
 	pd.DataFrame({
-		'R13_VPDB':     pd.Series([0.01118],    dtype = 'float'),
-		'R18_VSMOW':    pd.Series([0.0020052],  dtype = 'float'),
-		'R17_VSMOW':    pd.Series([0.00038475], dtype = 'float'),
-		'lambda_17':    pd.Series([0.528],      dtype = 'float'),
-		'alpha18_acid': pd.Series([1.008129],   dtype = 'float'),
+		'Parameter':     pd.Series(['R13_VPDB', 'R18_VSMOW', 'R17_VSMOW', 'lambda_17', 'alpha18_acid'],    dtype = 'str'),
+		'Value':     pd.Series([0.01118, 0.0020052, 0.00038475, 0.528, 1.008129],    dtype = 'str'),
 		}),
-	num_rows = 1,
-	use_container_width = True,
+	num_rows = 5,
+	use_container_width = False,
 	hide_index = True,
-	column_config = {
-		'R13_VPDB':     st.column_config.NumberColumn(format = '%.5f'),
-		'R18_VSMOW':    st.column_config.NumberColumn(format = '%.7f'),
-		'R17_VSMOW':    st.column_config.NumberColumn(format = '%.8f'),
-		'lambda_17':    st.column_config.NumberColumn(format = '%.3f'),
-		'alpha18_acid': st.column_config.NumberColumn(format = '%.6f'),
-		},
+	disabled = ('Parameter',),
 	)
 
-isoparams = isoparams.to_dict('records')[0]
+isoparams = {r['Parameter']: float(r['Value']) for r in isoparams.to_dict('records')}
+
+st.write("#### Standardization methods:")
+
+stdz_methods = st.data_editor(
+	pd.DataFrame({
+		'Quantity':     pd.Series(['δ13C', 'δ18O', 'Δ47', 'Δ48'],    dtype = 'str'),
+		'Method':     pd.Series(['Affine transformation', 'Affine transformation', 'Pooled regression', 'Pooled regression'],    dtype = 'str'),
+		}),
+	num_rows = 4,
+	use_container_width = False,
+	hide_index = True,
+	disabled = ('Quantity',),
+	)
+
+# df = pd.DataFrame(
+# 	[
+# 		{
+# 			'd13C_stdz_method': 'Affine transformation',
+# 			'd18O_stdz_method': 'Affine transformation',
+# 			'D47_stdz_method':  'Pooled',
+# 			'D48_stdz_method':  'Pooled',
+# 		}
+# 	]
+# )
+
+# for k in ['d13C_stdz_method', 'd18O_stdz_method']:
+# 	df[k] = (df[k].astype('category').cat.add_categories(['Constant offset']))
+# for k in ['D47_stdz_method', 'D48_stdz_method']:
+# 	df[k] = (df[k].astype('category').cat.add_categories(['Independent sessions']))
+
+# edited_df = st.data_editor(
+# 	df,
+# 	hide_index = True,
+# # 	disabled = [],
+# 	)
 
 
 # A01	Session01	ETH-1	5.795017	11.627668	16.893512	11.491072	17.277490
