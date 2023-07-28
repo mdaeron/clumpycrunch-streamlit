@@ -5,6 +5,7 @@ Try streamlit
 
 import streamlit as st
 import pandas as pd
+import D47crunch
 
 st.set_page_config(
 	page_title = 'ClumpyCrunch',
@@ -13,7 +14,7 @@ st.set_page_config(
 
 st.write("""
 # ClumpyCrunch
-### Input data
+## Input data
 Paste your raw data here:
 """)
 
@@ -30,65 +31,145 @@ rawdata = st.data_editor(
 		'd49':     pd.Series([], dtype = 'float'),
 		}),
 	num_rows = 'dynamic',
-	use_container_width = True,
+	use_container_width = False,
 	hide_index = True,
 	)
 
 rawdata = rawdata.to_dict('records')
 rawdata = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in rawdata]
 
-# D47_anchors_expander = st.expander('Standardization Anchors')
-# with D47_anchors_expander:
+st.write("## Oxygen-17 correction parameters and acid fractionation of oxygen-18")
+
+isoparams = [
+	(
+		'R13_VPDB',
+		0.01118,
+		'13C/12C ratio of VPDB',
+		),
+	(
+		'R18_VSMOW',
+		0.0020052,
+		'18O/16O ratio of VSMOW',
+		),
+	(
+		'R17_VSMOW',
+		0.00038475,
+		'17O/16O ratio of VSMOW',
+		),
+	(
+		'lambda_17',
+		0.528,
+		'Triple oxygen isotope exponent',
+		),
+	(
+		'alpha_18_acid',
+		1.008129,
+		'18O/16O fractionation factor of acid reaction',
+		),
+	]
+
+isoparams = st.data_editor(
+	pd.DataFrame({
+		'Parameter':  pd.Series([_[0] for _ in isoparams],    dtype = 'str'),
+		'Definition': pd.Series([_[2] for _ in isoparams],    dtype = 'str'),
+		'Value':      pd.Series([_[1] for _ in isoparams],    dtype = 'str'),
+		}),
+	num_rows = 5,
+	use_container_width = False,
+	hide_index = True,
+	disabled = ('Parameter', 'Definition'),
+	)
+
+isoparams = {r['Parameter']: float(r['Value']) for r in isoparams.to_dict('records')}
 
 st.write("""
-### Standardization Anchors
+## Reference Materials
 The following samples are used as anchors to standardize δ<sup>13</sup>C<sub>VPDB</sub>, δ<sup>18</sup>O<sub>VPDB</sub>, Δ<sub>47</sub>, and Δ<sub>48</sub> values:
 """, unsafe_allow_html = True)
 
+anchors = {}
+
+for s in D47crunch.D4xdata().Nominal_d13C_VPDB:
+	if s not in anchors:
+		anchors[s] = {}
+	anchors[s]['d13C_VPDB'] = f'{D47crunch.D4xdata().Nominal_d13C_VPDB[s]:.2f}'
+
+for s in D47crunch.D4xdata().Nominal_d18O_VPDB:
+	if s not in anchors:
+		anchors[s] = {}
+	anchors[s]['d18O_VPDB'] = f'{D47crunch.D4xdata().Nominal_d18O_VPDB[s]:.2f}'
+
+for s in D47crunch.D47data().Nominal_D47:
+	if s not in anchors:
+		anchors[s] = {}
+	anchors[s]['D47'] = f'{D47crunch.D47data().Nominal_D47[s]:.4f}'
+
+for s in D47crunch.D48data().Nominal_D48:
+	if s not in anchors:
+		anchors[s] = {}
+	anchors[s]['D48'] = f'{D47crunch.D48data().Nominal_D48[s]:.3f}'
+
 anchors_df = pd.DataFrame({
-	'Sample':    pd.Series([], dtype = 'str'),
-	'd13C_VPDB': pd.Series([], dtype = 'float'),
-	'd18O_VPDB': pd.Series([], dtype = 'float'),
-	'D47':       pd.Series([], dtype = 'float'),
-	'D48':       pd.Series([], dtype = 'float'),
+	'Sample':    pd.Series([s for s in anchors], dtype = 'str'),
+	'd13C_VPDB': pd.Series([anchors[s]['d13C_VPDB'] if 'd13C_VPDB' in anchors[s] else None for s in anchors], dtype = 'str'),
+	'd18O_VPDB': pd.Series([anchors[s]['d18O_VPDB'] if 'd18O_VPDB' in anchors[s] else None for s in anchors], dtype = 'str'),
+	'D47':       pd.Series([anchors[s]['D47'] if 'D47' in anchors[s] else None for s in anchors], dtype = 'str'),
+	'D48':       pd.Series([anchors[s]['D48'] if 'D48' in anchors[s] else None for s in anchors], dtype = 'str'),
 	})
 
 anchors = st.data_editor(
 	anchors_df,
 	num_rows = 'dynamic',
-	use_container_width = True,
+	use_container_width = False,
 	hide_index = True,
 	)
 
 anchors = anchors.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
-st.write("### Oxygen-17 correction parameters and acid fractionation of oxygen-18")
 
-isoparams = st.data_editor(
-	pd.DataFrame({
-		'Parameter':     pd.Series(['R13_VPDB', 'R18_VSMOW', 'R17_VSMOW', 'lambda_17', 'alpha18_acid'],    dtype = 'str'),
-		'Value':     pd.Series([0.01118, 0.0020052, 0.00038475, 0.528, 1.008129],    dtype = 'str'),
-		}),
-	num_rows = 5,
-	use_container_width = False,
-	hide_index = True,
-	disabled = ('Parameter',),
-	)
+st.write("## Standardization methods:")
 
-isoparams = {r['Parameter']: float(r['Value']) for r in isoparams.to_dict('records')}
+d1xX_stdz_df = pd.DataFrame({
+		'Quantity':     pd.Series(['δ13C', 'δ18O'],    dtype = 'str'),
+		'Method':     pd.Series(['Affine transformation', 'Affine transformation'],    dtype = 'str'),
+		})
 
-st.write("#### Standardization methods:")
-
-stdz_methods = st.data_editor(
-	pd.DataFrame({
-		'Quantity':     pd.Series(['δ13C', 'δ18O', 'Δ47', 'Δ48'],    dtype = 'str'),
-		'Method':     pd.Series(['Affine transformation', 'Affine transformation', 'Pooled regression', 'Pooled regression'],    dtype = 'str'),
-		}),
-	num_rows = 4,
+d1xX_stdz_methods = st.data_editor(
+	d1xX_stdz_df,
+	num_rows = 2,
 	use_container_width = False,
 	hide_index = True,
 	disabled = ('Quantity',),
+	column_config = {
+		'Method': st.column_config.SelectboxColumn(
+			'Method',
+			help = 'Which standardization method to use',
+			width = 'medium',
+			required = True,
+			options=['Affine transformation', 'Constant offset'],
+			)
+		},
+	)
+
+D4x_stdz_methods = st.data_editor(
+	pd.DataFrame({
+		'Quantity':     pd.Series(['Δ47', 'Δ48'],    dtype = 'str'),
+		'Method':     pd.Series(['Pooled regression', 'Pooled regression'],    dtype = 'str'),
+		}),
+	num_rows = 2,
+	use_container_width = False,
+	hide_index = True,
+	disabled = ('Quantity',),
+	column_config = {
+		'Method': st.column_config.SelectboxColumn(
+			'Method',
+			help = 'Which standardization method to use',
+			width = 'medium',
+			required = True,
+			options=['Pooled regression', 'Independent sessions'],
+			)
+		},
 	)
 
 # df = pd.DataFrame(
@@ -102,8 +183,6 @@ stdz_methods = st.data_editor(
 # 	]
 # )
 
-# for k in ['d13C_stdz_method', 'd18O_stdz_method']:
-# 	df[k] = (df[k].astype('category').cat.add_categories(['Constant offset']))
 # for k in ['D47_stdz_method', 'D48_stdz_method']:
 # 	df[k] = (df[k].astype('category').cat.add_categories(['Independent sessions']))
 
