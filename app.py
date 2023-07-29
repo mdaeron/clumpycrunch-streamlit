@@ -210,3 +210,24 @@ D4x_stdz_methods = st.data_editor(
 # A12	Session01	IAEA-C2	-3.876921	4.868892	0.521845	12.013444	17.368631
 # A13	Session01	ETH-3	5.539840	12.013444	17.368631	11.447846	17.234280
 # A14	Session01	IAEA-C1	6.219046	11.447846	17.234280	-4.817179	-11.635064
+
+process_button = st.button('Process data')
+
+if process_button:
+	rawdata47 = D47crunch.D47data(rawdata)
+	rawdata47.Nominal_d13C_VPDB = {a['Sample']: float(a['d13C_VPDB']) for a in anchors if 'd13C_VPDB' in a}
+	rawdata47.Nominal_d18O_VPDB = {a['Sample']: float(a['d18O_VPDB']) for a in anchors if 'd18O_VPDB' in a}
+	rawdata47.Nominal_D47 = {a['Sample']: float(a['D47']) for a in anchors if 'D47' in a}
+	rawdata47.refresh()
+	rawdata47.wg()
+	rawdata47.crunch()
+	rawdata47.standardize()
+	table_of_samples = D47crunch.table_of_samples(rawdata47, output = 'raw')
+	st.data_editor(
+		pd.DataFrame(
+			table_of_samples[1:],
+			columns = table_of_samples[0],
+			),
+		hide_index = True,
+		disabled = table_of_samples[0],
+		)
