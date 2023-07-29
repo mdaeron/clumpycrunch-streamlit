@@ -38,7 +38,8 @@ rawdata = st.data_editor(
 rawdata = rawdata.to_dict('records')
 rawdata = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in rawdata]
 
-st.write("## Oxygen-17 correction parameters and acid fractionation of oxygen-18")
+# st.write("## Oxygen-17 correction parameters and acid fractionation of oxygen-18")
+st.write("## Data reduction parameters")
 
 isoparams = [
 	(
@@ -128,7 +129,7 @@ anchors = anchors.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
 
-st.write("## Standardization methods:")
+st.write("## Standardization of bulk composition:")
 
 d1xX_stdz_df = pd.DataFrame({
 		'Quantity':     pd.Series(['δ13C', 'δ18O'],    dtype = 'str'),
@@ -151,6 +152,8 @@ d1xX_stdz_methods = st.data_editor(
 			)
 		},
 	)
+
+st.write("## Standardization of clumped isotopes:")
 
 D4x_stdz_methods = st.data_editor(
 	pd.DataFrame({
