@@ -298,6 +298,20 @@ Contents:
 		mime = 'application/zip',
 		)
 
+st.write(f'''
+<div style="color:#999999">
+<a style="color:inherit" href="https://github.com/mdaeron/clumpycrunch-streamlit">ClumpyCrunch</a>
+is an open-source web app based on the
+<a style="color:inherit" href="https://github.com/mdaeron/D47crunch">D47crunch</a>
+library, using standardization and error propagation methods described by
+<a style="color:inherit" href="https://doi.org/10.1029/2020GC009592">Daëron (2021)</a>.
+
+<p>
+Please <a style="color:inherit" href="https://github.com/mdaeron/clumpycrunch-streamlit/issues">open an issue</a>
+for bug reports, questions and/or suggestions.
+</div>
+''', unsafe_allow_html = True)
+
 
 # A01	Session01	ETH-1	5.795017	11.627668	16.893512	11.491072	17.277490
 # A02	Session01	FOO-1	6.219070	11.491072	17.277490	-4.817179	-11.635064
