@@ -3,9 +3,9 @@
 Try streamlit
 """
 
-import streamlit as st
+import io, zipfile, D47crunch
 import pandas as pd
-import D47crunch
+import streamlit as st
 
 st.set_page_config(
 	page_title = 'ClumpyCrunch',
@@ -265,15 +265,15 @@ if process_button:
 		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
 		st.pyplot(sp.fig, use_container_width = False, dpi = 100)
 
-# 	buf = io.BytesIO()
-# 
-# 	with zipfile.ZipFile(buf, "x") as csv_zip:
-# 		csv_zip.writestr("data1.csv", pd.DataFrame(data1).to_csv())
-# 		csv_zip.writestr("data2.csv", pd.DataFrame(data2).to_csv())
-# 
-# 	st.download_button(
-# 		label="Download zip",
-# 		data=buf.getvalue(),
-# 		file_name="mydownload.zip",
-# 		mime="application/zip",
-# 		)
+buf = io.BytesIO()
+
+with zipfile.ZipFile(buf, 'x') as csv_zip:
+	csv_zip.writestr('anchors.csv', anchors_df.to_csv(index = False))
+	csv_zip.writestr('anchors2.csv', anchors_df.to_csv(index = False))
+
+st.download_button(
+	label = 'Download zip',
+	data = buf.getvalue(),
+	file_name = 'clumpycrunch-results.zip',
+	mime = 'application/zip',
+	)
