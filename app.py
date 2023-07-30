@@ -3,8 +3,11 @@
 Try streamlit
 """
 
+__version__ = 0.1
+
 import io, zipfile, D47crunch
 import pandas as pd
+from datetime import datetime as dt
 import streamlit as st
 
 st.set_page_config(
@@ -21,28 +24,33 @@ Experimental implementation using streamlit
 Paste your raw data here:
 """)
 
+rawdata_df = pd.DataFrame({
+	'UID':     pd.Series([], dtype = 'str'),
+	'Session': pd.Series([], dtype = 'str'),
+	'Sample':  pd.Series([], dtype = 'str'),
+	'd45':     pd.Series([], dtype = 'float'),
+	'd46':     pd.Series([], dtype = 'float'),
+	'd47':     pd.Series([], dtype = 'float'),
+	'd48':     pd.Series([], dtype = 'float'),
+	'd49':     pd.Series([], dtype = 'float'),
+	})
 
-rawdata = st.data_editor(
-	pd.DataFrame({
-		'UID':     pd.Series([], dtype = 'str'),
-		'Session': pd.Series([], dtype = 'str'),
-		'Sample':  pd.Series([], dtype = 'str'),
-		'd45':     pd.Series([], dtype = 'float'),
-		'd46':     pd.Series([], dtype = 'float'),
-		'd47':     pd.Series([], dtype = 'float'),
-		'd48':     pd.Series([], dtype = 'float'),
-		'd49':     pd.Series([], dtype = 'float'),
-		}),
+rawdata_df = st.data_editor(
+	rawdata_df,
 	num_rows = 'dynamic',
 	use_container_width = False,
 	hide_index = True,
+	column_config = {
+		k: st.column_config.NumberColumn(format = '%.4f')
+		for k in ['d45', 'd46', 'd47', 'd48', 'd49']
+		},
 	)
 
-rawdata = rawdata.to_dict('records')
+rawdata = rawdata_df.to_dict('records')
 rawdata = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in rawdata]
 
 # st.write("## Oxygen-17 correction parameters and acid fractionation of oxygen-18")
-st.write("## Data reduction parameters :red[(not editable yet)]")
+st.write("## Data reduction parameters")
 
 isoparams = [
 	(
@@ -72,19 +80,21 @@ isoparams = [
 		),
 	]
 
-isoparams = st.data_editor(
-	pd.DataFrame({
-		'Parameter':  pd.Series([_[0] for _ in isoparams],    dtype = 'str'),
-		'Definition': pd.Series([_[2] for _ in isoparams],    dtype = 'str'),
-		'Value':      pd.Series([_[1] for _ in isoparams],    dtype = 'str'),
-		}),
+isoparams_df = pd.DataFrame({
+	'Parameter':  pd.Series([_[0] for _ in isoparams],    dtype = 'str'),
+	'Definition': pd.Series([_[2] for _ in isoparams],    dtype = 'str'),
+	'Value':      pd.Series([_[1] for _ in isoparams],    dtype = 'str'),
+	})
+
+isoparams_df = st.data_editor(
+	isoparams_df,
 	num_rows = 5,
 	use_container_width = False,
 	hide_index = True,
 	disabled = ('Parameter', 'Definition'),
 	)
 
-isoparams = {r['Parameter']: float(r['Value']) for r in isoparams.to_dict('records')}
+isoparams = {r['Parameter']: float(r['Value']) for r in isoparams_df.to_dict('records')}
 
 st.write("""
 ## Reference Materials
@@ -199,6 +209,96 @@ D4x_stdz_methods = st.data_editor(
 # 	)
 
 
+process_button = st.button(':red[Process data]')
+st.write(':red[(Δ48 not yet implemented)]')
+
+if process_button:
+	rawdata47 = D47crunch.D47data(rawdata)
+
+	rawdata47.R13_VPDB = isoparams['R13_VPDB']
+	rawdata47.R18_VSMOW = isoparams['R18_VSMOW']
+	rawdata47.R17_VSMOW = isoparams['R17_VSMOW']
+	rawdata47.LAMBDA_17 = isoparams['lambda_17']
+	rawdata47.R18_VPDB = rawdata47.R18_VSMOW * 1.03092
+	rawdata47.R17_VPDB = rawdata47.R17_VSMOW * 1.03092 ** rawdata47.LAMBDA_17
+
+	rawdata47.Nominal_d13C_VPDB = {a['Sample']: float(a['d13C_VPDB']) for a in anchors if 'd13C_VPDB' in a}
+	rawdata47.Nominal_d18O_VPDB = {a['Sample']: float(a['d18O_VPDB']) for a in anchors if 'd18O_VPDB' in a}
+	rawdata47.Nominal_D47 = {a['Sample']: float(a['D47']) for a in anchors if 'D47' in a}
+	rawdata47.refresh()
+	rawdata47.wg()
+	rawdata47.crunch()
+	rawdata47.standardize()
+
+	st.write('## Results')
+
+	st.write('### Table of samples')
+	table_of_samples = D47crunch.table_of_samples(rawdata47, output = 'raw')
+	st.data_editor(
+		pd.DataFrame(
+			table_of_samples[1:],
+			columns = table_of_samples[0],
+			),
+		hide_index = True,
+		disabled = table_of_samples[0],
+		)
+
+	st.write('### Table of sessions')
+	table_of_sessions = D47crunch.table_of_sessions(rawdata47, output = 'raw')
+	st.data_editor(
+		pd.DataFrame(
+			table_of_sessions[1:],
+			columns = table_of_sessions[0],
+			),
+		hide_index = True,
+		disabled = table_of_sessions[0],
+		)
+
+	st.write('### Table of analyses')
+	table_of_analyses = D47crunch.table_of_analyses(rawdata47, output = 'raw')
+	st.data_editor(
+		pd.DataFrame(
+			table_of_analyses[1:],
+			columns = table_of_analyses[0],
+			),
+		hide_index = True,
+		disabled = table_of_analyses[0],
+		)
+	
+	st.write('### Sessions plots')
+	for session in rawdata47.sessions:
+		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
+		st.pyplot(sp.fig, use_container_width = False, dpi = 72)
+
+	buf = io.BytesIO()
+
+	readme = f'''
+ClumpyCrunch version {__version__}, using D47crunch version {D47crunch.__version__}
+Processed on {dt.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Contents:
+
+* analyses.csv  : table of analyses
+* anchors.csv   : table of the anchors used to standardize δ13C, δ18O, Δ47, and Δ48 measurements
+* isoparams.csv : table of the parameters used for data reduction
+* rawdata.csv   : table of the raw input data, before any standardization
+'''
+
+	with zipfile.ZipFile(buf, 'x') as csv_zip:
+		csv_zip.writestr('analyses.csv', '\n'.join([','.join(l) for l in table_of_analyses]))
+		csv_zip.writestr('anchors.csv', anchors_df.to_csv(index = False))
+		csv_zip.writestr('isoparams.csv', isoparams_df.to_csv(index = False))
+		csv_zip.writestr('rawdata.csv', rawdata_df.to_csv(index = False))
+		csv_zip.writestr('readme.txt', readme[1:])
+
+	st.download_button(
+		label = 'Download zip',
+		data = buf.getvalue(),
+		file_name = 'clumpycrunch-results.zip',
+		mime = 'application/zip',
+		)
+
+
 # A01	Session01	ETH-1	5.795017	11.627668	16.893512	11.491072	17.277490
 # A02	Session01	FOO-1	6.219070	11.491072	17.277490	-4.817179	-11.635064
 # A03	Session01	ETH-2	-6.058681	-4.817179	-11.635064	4.941839	0.606117
@@ -227,53 +327,3 @@ D4x_stdz_methods = st.data_editor(
 # B12	Session02	FOO-2	-3.876921	4.868892	0.521845	12.013444	17.368631
 # B13	Session02	ETH-3	5.539840	12.013444	17.368631	11.447846	17.234280
 # B14	Session02	FOO-1	6.219046	11.447846	17.234280	-4.817179	-11.635064
-
-process_button = st.button(':red[Process data]')
-st.write(':red[(Δ48 not yet implemented)]')
-
-if process_button:
-	rawdata47 = D47crunch.D47data(rawdata)
-	rawdata47.Nominal_d13C_VPDB = {a['Sample']: float(a['d13C_VPDB']) for a in anchors if 'd13C_VPDB' in a}
-	rawdata47.Nominal_d18O_VPDB = {a['Sample']: float(a['d18O_VPDB']) for a in anchors if 'd18O_VPDB' in a}
-	rawdata47.Nominal_D47 = {a['Sample']: float(a['D47']) for a in anchors if 'D47' in a}
-	rawdata47.refresh()
-	rawdata47.wg()
-	rawdata47.crunch()
-	rawdata47.standardize()
-
-	table_of_sessions = D47crunch.table_of_sessions(rawdata47, output = 'raw')
-	st.data_editor(
-		pd.DataFrame(
-			table_of_sessions[1:],
-			columns = table_of_sessions[0],
-			),
-		hide_index = True,
-		disabled = table_of_sessions[0],
-		)
-
-	table_of_samples = D47crunch.table_of_samples(rawdata47, output = 'raw')
-	st.data_editor(
-		pd.DataFrame(
-			table_of_samples[1:],
-			columns = table_of_samples[0],
-			),
-		hide_index = True,
-		disabled = table_of_samples[0],
-		)
-	
-	for session in rawdata47.sessions:
-		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
-		st.pyplot(sp.fig, use_container_width = False, dpi = 100)
-
-buf = io.BytesIO()
-
-with zipfile.ZipFile(buf, 'x') as csv_zip:
-	csv_zip.writestr('anchors.csv', anchors_df.to_csv(index = False))
-	csv_zip.writestr('anchors2.csv', anchors_df.to_csv(index = False))
-
-st.download_button(
-	label = 'Download zip',
-	data = buf.getvalue(),
-	file_name = 'clumpycrunch-results.zip',
-	mime = 'application/zip',
-	)
