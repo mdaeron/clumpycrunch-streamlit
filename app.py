@@ -15,30 +15,48 @@ st.set_page_config(
 	layout = 'wide',
 	)
 
+st.write('''
+<style>
+h1 {
+	background-color: #fdcf4e;
+	margin-top: 0;
+	}
+h2, h3 {
+	background-color: #F0F0F0;	
+}
+h1, h2, h3 {
+	padding-left: 0.6em;
+	padding-top: 0.4ex;
+	padding-bottom: 0.4ex;
+	margin-bottom: 1ex;
+}
+</style>
+''', unsafe_allow_html = True)
+
 st.write("""
 # ClumpyCrunch
 
 Experimental implementation using streamlit
 
-## Input data
+### Input data
 Paste your raw data here:
 """)
 
 rawdata_df = pd.DataFrame({
-	'UID':     pd.Series([], dtype = 'str'),
-	'Session': pd.Series([], dtype = 'str'),
-	'Sample':  pd.Series([], dtype = 'str'),
-	'd45':     pd.Series([], dtype = 'float'),
-	'd46':     pd.Series([], dtype = 'float'),
-	'd47':     pd.Series([], dtype = 'float'),
-	'd48':     pd.Series([], dtype = 'float'),
-	'd49':     pd.Series([], dtype = 'float'),
+	'UID':     pd.Series([None], dtype = 'str'),
+	'Session': pd.Series([None], dtype = 'str'),
+	'Sample':  pd.Series([None], dtype = 'str'),
+	'd45':     pd.Series([None], dtype = 'float'),
+	'd46':     pd.Series([None], dtype = 'float'),
+	'd47':     pd.Series([None], dtype = 'float'),
+	'd48':     pd.Series([None], dtype = 'float'),
+	'd49':     pd.Series([None], dtype = 'float'),
 	})
 
 rawdata_df = st.data_editor(
 	rawdata_df,
 	num_rows = 'dynamic',
-	use_container_width = False,
+	use_container_width = True,
 	hide_index = True,
 	column_config = {
 		k: st.column_config.NumberColumn(format = '%.4f')
@@ -49,8 +67,7 @@ rawdata_df = st.data_editor(
 rawdata = rawdata_df.to_dict('records')
 rawdata = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in rawdata]
 
-# st.write("## Oxygen-17 correction parameters and acid fractionation of oxygen-18")
-st.write("## Data reduction parameters")
+st.write("### Data reduction parameters")
 
 isoparams = [
 	(
@@ -97,7 +114,7 @@ isoparams_df = st.data_editor(
 isoparams = {r['Parameter']: float(r['Value']) for r in isoparams_df.to_dict('records')}
 
 st.write("""
-## Reference Materials
+### Reference Materials
 The following samples are used as anchors to standardize δ<sup>13</sup>C<sub>VPDB</sub>, δ<sup>18</sup>O<sub>VPDB</sub>, Δ<sub>47</sub>, and Δ<sub>48</sub> values:
 """, unsafe_allow_html = True)
 
@@ -142,7 +159,7 @@ anchors = anchors.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
 
-st.write("## Standardization of bulk composition :red[(not editable yet)]")
+st.write("### Standardization of bulk composition :red[(not editable yet)]")
 
 d1xX_stdz_df = pd.DataFrame({
 		'Quantity':     pd.Series(['δ13C', 'δ18O'],    dtype = 'str'),
@@ -166,7 +183,7 @@ d1xX_stdz_methods = st.data_editor(
 		},
 	)
 
-st.write("## Standardization of clumped isotopes :red[(not editable yet)]")
+st.write("### Standardization of clumped isotopes :red[(not editable yet)]")
 
 D4x_stdz_methods = st.data_editor(
 	pd.DataFrame({
@@ -230,9 +247,9 @@ if process_button:
 	rawdata47.crunch()
 	rawdata47.standardize()
 
-	st.write('## Results')
+	st.write('### Results')
 
-	st.write('### Table of samples')
+	st.write('#### Table of samples')
 	table_of_samples = D47crunch.table_of_samples(rawdata47, output = 'raw')
 	st.data_editor(
 		pd.DataFrame(
@@ -243,7 +260,7 @@ if process_button:
 		disabled = table_of_samples[0],
 		)
 
-	st.write('### Table of sessions')
+	st.write('#### Table of sessions')
 	table_of_sessions = D47crunch.table_of_sessions(rawdata47, output = 'raw')
 	st.data_editor(
 		pd.DataFrame(
@@ -254,7 +271,7 @@ if process_button:
 		disabled = table_of_sessions[0],
 		)
 
-	st.write('### Table of analyses')
+	st.write('#### Table of analyses')
 	table_of_analyses = D47crunch.table_of_analyses(rawdata47, output = 'raw')
 	st.data_editor(
 		pd.DataFrame(
@@ -265,7 +282,7 @@ if process_button:
 		disabled = table_of_analyses[0],
 		)
 	
-	st.write('### Sessions plots')
+	st.write('#### Sessions plots')
 	for session in rawdata47.sessions:
 		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
 		st.pyplot(sp.fig, use_container_width = False, dpi = 72)
@@ -299,7 +316,7 @@ Contents:
 		)
 
 st.write(f'''
-<div style="color:#999999">
+<div style="color:#999999; margin-top:4ex;">
 <a style="color:inherit" href="https://github.com/mdaeron/clumpycrunch-streamlit">ClumpyCrunch</a>
 is an open-source web app based on the
 <a style="color:inherit" href="https://github.com/mdaeron/D47crunch">D47crunch</a>
