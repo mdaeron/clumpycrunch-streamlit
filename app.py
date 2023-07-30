@@ -14,6 +14,9 @@ st.set_page_config(
 
 st.write("""
 # ClumpyCrunch
+
+Experimental implementation using streamlit
+
 ## Input data
 Paste your raw data here:
 """)
@@ -39,7 +42,7 @@ rawdata = rawdata.to_dict('records')
 rawdata = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in rawdata]
 
 # st.write("## Oxygen-17 correction parameters and acid fractionation of oxygen-18")
-st.write("## Data reduction parameters")
+st.write("## Data reduction parameters :red[(not editable yet)]")
 
 isoparams = [
 	(
@@ -129,7 +132,7 @@ anchors = anchors.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
 
-st.write("## Standardization of bulk composition:")
+st.write("## Standardization of bulk composition :red[(not editable yet)]")
 
 d1xX_stdz_df = pd.DataFrame({
 		'Quantity':     pd.Series(['δ13C', 'δ18O'],    dtype = 'str'),
@@ -153,7 +156,7 @@ d1xX_stdz_methods = st.data_editor(
 		},
 	)
 
-st.write("## Standardization of clumped isotopes:")
+st.write("## Standardization of clumped isotopes :red[(not editable yet)]")
 
 D4x_stdz_methods = st.data_editor(
 	pd.DataFrame({
@@ -197,9 +200,9 @@ D4x_stdz_methods = st.data_editor(
 
 
 # A01	Session01	ETH-1	5.795017	11.627668	16.893512	11.491072	17.277490
-# A02	Session01	IAEA-C1	6.219070	11.491072	17.277490	-4.817179	-11.635064
+# A02	Session01	FOO-1	6.219070	11.491072	17.277490	-4.817179	-11.635064
 # A03	Session01	ETH-2	-6.058681	-4.817179	-11.635064	4.941839	0.606117
-# A04	Session01	IAEA-C2	-3.861839	4.941839	0.606117	12.052277	17.405548
+# A04	Session01	FOO-2	-3.861839	4.941839	0.606117	12.052277	17.405548
 # A05	Session01	ETH-3	5.543654	12.052277	17.4055482	-2.087501	-39.548484
 # A06	Session01	MERCK	-35.929352	-2.087501	-39.548484	-5.194170	-11.944111
 # A07	Session01	ETH-4	-6.222218	-5.194170	-11.944111	-4.877104	-11.699265
@@ -207,11 +210,26 @@ D4x_stdz_methods = st.data_editor(
 # A09	Session01	MERCK	-35.930739	-2.080798	-39.545632	11.559104	16.801908
 # A10	Session01	ETH-1	5.788207	11.559104	16.801908	-5.221407	-11.987503
 # A11	Session01	ETH-4	-6.217508	-5.221407	-11.987503	4.868892	0.521845
-# A12	Session01	IAEA-C2	-3.876921	4.868892	0.521845	12.013444	17.368631
+# A12	Session01	FOO-2	-3.876921	4.868892	0.521845	12.013444	17.368631
 # A13	Session01	ETH-3	5.539840	12.013444	17.368631	11.447846	17.234280
-# A14	Session01	IAEA-C1	6.219046	11.447846	17.234280	-4.817179	-11.635064
+# A14	Session01	FOO-1	6.219046	11.447846	17.234280	-4.817179	-11.635064
+# B01	Session02	ETH-1	5.795017	11.627668	16.893512	11.491072	17.277490
+# B02	Session02	FOO-1	6.219070	11.491072	17.277490	-4.817179	-11.635064
+# B03	Session02	ETH-2	-6.058681	-4.817179	-11.635064	4.941839	0.606117
+# B04	Session02	FOO-2	-3.861839	4.941839	0.606117	12.052277	17.405548
+# B05	Session02	ETH-3	5.543654	12.052277	17.4055482	-2.087501	-39.548484
+# B06	Session02	MERCK	-35.929352	-2.087501	-39.548484	-5.194170	-11.944111
+# B07	Session02	ETH-4	-6.222218	-5.194170	-11.944111	-4.877104	-11.699265
+# B08	Session02	ETH-2	-6.067055	-4.877104	-11.6992659	-2.080798	-39.545632
+# B09	Session02	MERCK	-35.930739	-2.080798	-39.545632	11.559104	16.801908
+# B10	Session02	ETH-1	5.788207	11.559104	16.801908	-5.221407	-11.987503
+# B11	Session02	ETH-4	-6.217508	-5.221407	-11.987503	4.868892	0.521845
+# B12	Session02	FOO-2	-3.876921	4.868892	0.521845	12.013444	17.368631
+# B13	Session02	ETH-3	5.539840	12.013444	17.368631	11.447846	17.234280
+# B14	Session02	FOO-1	6.219046	11.447846	17.234280	-4.817179	-11.635064
 
-process_button = st.button('Process data')
+process_button = st.button(':red[Process data]')
+st.write(':red[(Δ48 not yet implemented)]')
 
 if process_button:
 	rawdata47 = D47crunch.D47data(rawdata)
@@ -222,6 +240,17 @@ if process_button:
 	rawdata47.wg()
 	rawdata47.crunch()
 	rawdata47.standardize()
+
+	table_of_sessions = D47crunch.table_of_sessions(rawdata47, output = 'raw')
+	st.data_editor(
+		pd.DataFrame(
+			table_of_sessions[1:],
+			columns = table_of_sessions[0],
+			),
+		hide_index = True,
+		disabled = table_of_sessions[0],
+		)
+
 	table_of_samples = D47crunch.table_of_samples(rawdata47, output = 'raw')
 	st.data_editor(
 		pd.DataFrame(
@@ -231,3 +260,20 @@ if process_button:
 		hide_index = True,
 		disabled = table_of_samples[0],
 		)
+	
+	for session in rawdata47.sessions:
+		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
+		st.pyplot(sp.fig, use_container_width = False, dpi = 100)
+
+# 	buf = io.BytesIO()
+# 
+# 	with zipfile.ZipFile(buf, "x") as csv_zip:
+# 		csv_zip.writestr("data1.csv", pd.DataFrame(data1).to_csv())
+# 		csv_zip.writestr("data2.csv", pd.DataFrame(data2).to_csv())
+# 
+# 	st.download_button(
+# 		label="Download zip",
+# 		data=buf.getvalue(),
+# 		file_name="mydownload.zip",
+# 		mime="application/zip",
+# 		)
