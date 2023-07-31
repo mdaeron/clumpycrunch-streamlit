@@ -337,9 +337,11 @@ if process_button:
 		)
 
 	st.write('#### Sessions plots')
+	plots = {}
 	for session in rawdata47.sessions:
 		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
 		st.pyplot(sp.fig, use_container_width = False, dpi = 100)
+		plots[session] = sp.fig
 
 	buf = io.BytesIO()
 
@@ -355,12 +357,18 @@ Contents:
 * rawdata.csv   : table of the raw input data, before any standardization
 '''
 
-	with zipfile.ZipFile(buf, 'x') as csv_zip:
-		csv_zip.writestr('analyses.csv', '\n'.join([','.join(l) for l in table_of_analyses]))
-		csv_zip.writestr('anchors.csv', anchors_df.to_csv(index = False))
-		csv_zip.writestr('isoparams.csv', isoparams_df.to_csv(index = False))
-		csv_zip.writestr('rawdata.csv', rawdata_df.to_csv(index = False))
-		csv_zip.writestr('readme.txt', readme[1:])
+	with zipfile.ZipFile(buf, 'x') as dl_zip:
+		dl_zip.writestr('analyses.csv', '\n'.join([','.join(l) for l in table_of_analyses]))
+		dl_zip.writestr('anchors.csv', anchors_df.to_csv(index = False))
+		dl_zip.writestr('isoparams.csv', isoparams_df.to_csv(index = False))
+		dl_zip.writestr('rawdata.csv', rawdata_df.to_csv(index = False))
+		dl_zip.writestr('readme.txt', readme[1:])
+		for session in rawdata47.sessions:
+			plotbuf = io.BytesIO()
+			plots[session].savefig(plotbuf, format='pdf')
+			plotbuf.seek(0)
+			dl_zip.writestr(f'D47_{session}.pdf', plotbuf.read())
+
 
 	st.download_button(
 		label = 'Download zip',
