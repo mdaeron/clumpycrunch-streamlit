@@ -15,6 +15,12 @@ st.set_page_config(
 	layout = 'wide',
 	)
 
+try:
+	if foo:
+		st.write('FOOBAR')
+except:
+	pass
+
 st.write('''
 <style>
 h1 {
@@ -33,28 +39,67 @@ h1, h2, h3 {
 </style>
 ''', unsafe_allow_html = True)
 
-st.write("""
+st.markdown("""
 # ClumpyCrunch
 
-Experimental implementation using streamlit
+:red[Use with caution: this is a work-in-progress re-implementation using Streamlit.]
 
 ### Input data
-Paste your raw data here:
 """)
 
-rawdata_df = pd.DataFrame({
-	'UID':     pd.Series([None], dtype = 'str'),
-	'Session': pd.Series([None], dtype = 'str'),
-	'Sample':  pd.Series([None], dtype = 'str'),
-	'd45':     pd.Series([None], dtype = 'float'),
-	'd46':     pd.Series([None], dtype = 'float'),
-	'd47':     pd.Series([None], dtype = 'float'),
-	'd48':     pd.Series([None], dtype = 'float'),
-	'd49':     pd.Series([None], dtype = 'float'),
-	})
+
+def callback_random_data():
+	kwargs = dict(
+		samples = [
+			dict(Sample = 'ETH-1', N = 3),
+			dict(Sample = 'ETH-2', N = 3),
+			dict(Sample = 'ETH-3', N = 3),
+			dict(Sample = 'FOO', N = 3,
+				d13C_VPDB = -5., d18O_VPDB = -10.,
+				D47 = 0.3, D48 = 0.15),
+			dict(Sample = 'BAR', N = 3,
+				d13C_VPDB = -15., d18O_VPDB = -2.,
+				D47 = 0.6, D48 = 0.2),
+			],
+		rD47 = 0.010,
+		rD48 = 0.030,
+		)
+
+	_data_ = D47crunch.D47data(
+		D47crunch.virtual_data(session = 'Session_01', **kwargs)
+		+ D47crunch.virtual_data(session = 'Session_02', **kwargs)
+		+ D47crunch.virtual_data(session = 'Session_03', **kwargs)
+		)	
+
+	st.session_state['rawdata_df'] = pd.DataFrame({
+		'UID':     pd.Series([r['UID'] for r in _data_], dtype = 'str'),
+		'Session': pd.Series([r['Session'] for r in _data_], dtype = 'str'),
+		'Sample':  pd.Series([r['Sample'] for r in _data_], dtype = 'str'),
+		'd45':     pd.Series([r['d45'] for r in _data_], dtype = 'float'),
+		'd46':     pd.Series([r['d46'] for r in _data_], dtype = 'float'),
+		'd47':     pd.Series([r['d47'] for r in _data_], dtype = 'float'),
+		'd48':     pd.Series([r['d48'] for r in _data_], dtype = 'float'),
+		'd49':     pd.Series([r['d47'] for r in _data_], dtype = 'float'),
+		})
+
+if 'rawdata_df' not in st.session_state:
+	st.session_state['rawdata_df'] = pd.DataFrame({
+		'UID':     pd.Series([None], dtype = 'str'),
+		'Session': pd.Series([None], dtype = 'str'),
+		'Sample':  pd.Series([None], dtype = 'str'),
+		'd45':     pd.Series([None], dtype = 'float'),
+		'd46':     pd.Series([None], dtype = 'float'),
+		'd47':     pd.Series([None], dtype = 'float'),
+		'd48':     pd.Series([None], dtype = 'float'),
+		'd49':     pd.Series([None], dtype = 'float'),
+		})
+
+st.button('Generate random data', on_click = callback_random_data)
+
+st.markdown('or paste your raw data here:')
 
 rawdata_df = st.data_editor(
-	rawdata_df,
+	st.session_state['rawdata_df'],
 	num_rows = 'dynamic',
 	use_container_width = True,
 	hide_index = True,
@@ -116,7 +161,7 @@ isoparams = {r['Parameter']: float(r['Value']) for r in isoparams_df.to_dict('re
 st.write("""
 ### Reference Materials
 The following samples are used as anchors to standardize δ<sup>13</sup>C<sub>VPDB</sub>, δ<sup>18</sup>O<sub>VPDB</sub>, Δ<sub>47</sub>, and Δ<sub>48</sub> values:
-""", unsafe_allow_html = True)
+""", unsafe_allow_html = True)	
 
 anchors = {}
 
@@ -158,8 +203,18 @@ anchors = st.data_editor(
 anchors = anchors.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
+with st.expander('Instructions'):
+	st.write(
+		"""
+Each row corresponds to a given sample which may be used as a standardization anchor for
+any combination of δ<sup>13</sup>C<sub>VPDB</sub>, δ<sup>18</sup>O<sub>VPDB</sub>,
+Δ<sub>47</sub>, and/or Δ<sub>48</sub>, simply by specifying the nominal value for each
+sample in the relevant column.
+""",
+		unsafe_allow_html = True,
+		)
 
-st.write("### Standardization of bulk composition :red[(not editable yet)]")
+st.write("### Standardization of bulk composition :red[(not yet implemented)]")
 
 d1xX_stdz_df = pd.DataFrame({
 		'Quantity':     pd.Series(['δ13C', 'δ18O'],    dtype = 'str'),
@@ -183,7 +238,7 @@ d1xX_stdz_methods = st.data_editor(
 		},
 	)
 
-st.write("### Standardization of clumped isotopes :red[(not editable yet)]")
+st.write("### Standardization of clumped isotopes :red[(not yet implemented)]")
 
 D4x_stdz_methods = st.data_editor(
 	pd.DataFrame({
@@ -224,7 +279,6 @@ D4x_stdz_methods = st.data_editor(
 # 	hide_index = True,
 # # 	disabled = [],
 # 	)
-
 
 process_button = st.button(':red[Process data]')
 st.write(':red[(Δ48 not yet implemented)]')
@@ -281,11 +335,11 @@ if process_button:
 		hide_index = True,
 		disabled = table_of_analyses[0],
 		)
-	
+
 	st.write('#### Sessions plots')
 	for session in rawdata47.sessions:
 		sp = rawdata47.plot_single_session(session, xylimits = 'constant')
-		st.pyplot(sp.fig, use_container_width = False, dpi = 72)
+		st.pyplot(sp.fig, use_container_width = False, dpi = 100)
 
 	buf = io.BytesIO()
 
@@ -314,6 +368,12 @@ Contents:
 		file_name = 'clumpycrunch-results.zip',
 		mime = 'application/zip',
 		)
+
+
+# results_container = st.container()
+# 
+# with results_container:
+# 	pass
 
 st.write(f'''
 <div style="color:#999999; margin-top:4ex;">
