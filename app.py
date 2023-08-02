@@ -193,14 +193,14 @@ anchors_df = pd.DataFrame({
 	'D48':       pd.Series([anchors[s]['D48'] if 'D48' in anchors[s] else None for s in anchors], dtype = 'str'),
 	})
 
-anchors = st.data_editor(
+anchors_df = st.data_editor(
 	anchors_df,
 	num_rows = 'dynamic',
 	use_container_width = False,
 	hide_index = True,
 	)
 
-anchors = anchors.to_dict('records')
+anchors = anchors_df.to_dict('records')
 anchors = [{k: r[k] for k in r if not pd.isnull(r[k])} for r in anchors]
 
 with st.expander('Instructions'):
